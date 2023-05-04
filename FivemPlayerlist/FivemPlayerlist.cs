@@ -44,7 +44,15 @@ namespace FivemPlayerlist
             public string userId;
             public string userName;
         }
-        private IList<FreefunPlayer> freefunPlayers = new List<FreefunPlayer>();
+        private Dictionary<int, FreefunPlayer> freefunPlayers = new Dictionary<int, FreefunPlayer>();
+
+        public struct FreefunPlayerExperience
+        {
+            public int netId;
+            public int xp;
+            public int rank;
+        }
+        private Dictionary<int, FreefunPlayerExperience> freefunPlayerExperience = new Dictionary<int, FreefunPlayerExperience>();
 
         private Dictionary<int, string> textureCache = new Dictionary<int, string>();
 
@@ -54,7 +62,7 @@ namespace FivemPlayerlist
         public FivemPlayerlist()
         {
             TriggerServerEvent("fs:getMaxPlayers");
-            TriggerServerEvent("freefundb:server:requestInfinityPlayer");
+            // TriggerServerEvent("freefundb:server:requestInfinityPlayer");
             Tick += ShowScoreboard;
             Tick += DisplayController;
             Tick += BackupTimer;
@@ -65,6 +73,7 @@ namespace FivemPlayerlist
             EventHandlers.Add("fs:setMaxPlayers", new Action<int>(SetMaxPlayers));
             EventHandlers.Add("fs:setPlayerConfig", new Action<int, string, int, bool>(SetPlayerConfig));
             EventHandlers.Add("freefundb:client:onInfinityPlayerUpdate", new Action<List<object>>(onInfinityPlayerUpdate));
+            EventHandlers.Add("xperience:client:onPlayerRankUpdate", new Action<List<object>>(onPlayerRankUpdate));
             Debug.WriteLine("init?");
         }
 
@@ -77,15 +86,16 @@ namespace FivemPlayerlist
                     if(_player is IDictionary<string, object> player)
                     {
                         string netId = player["netId"].ToString();
+                        int intNetId = Int32.Parse(netId);
                         Debug.WriteLine("netId: " + netId);
                         var freefunPlayer = new FreefunPlayer()
                         {
-                            netId = Int32.Parse(netId),
+                            netId = intNetId,
                             identifiers = player["identifiers"] as string[],
                             userId = player["userId"] as string,
                             userName = player["userName"] as string,
                         };
-                        freefunPlayers.Add(freefunPlayer);
+                        freefunPlayers.Add(intNetId, freefunPlayer);
                         Debug.WriteLine("Freefun player" + freefunPlayer.userName);
 
                     }
@@ -95,7 +105,37 @@ namespace FivemPlayerlist
                     Debug.WriteLine(e.ToString());
                 }
             }
-            Debug.WriteLine("Freefun Players count: "+freefunPlayers.Count());
+            Debug.WriteLine("Freefun Players count: "+freefunPlayers.Keys.Count());
+        }
+
+        private void onPlayerRankUpdate(List<object> obj)
+        {
+            freefunPlayerExperience.Clear();
+            foreach (var _player in obj)
+            {
+                try
+                {
+                    if (_player is IDictionary<string, object> player)
+                    {
+                        string netId = player["netId"].ToString();
+                        int intNetId = Int32.Parse(netId);
+                        int rank = Int32.Parse(player["rank"].ToString());
+                        int xp = Int32.Parse(player["xp"].ToString());
+                        Debug.WriteLine("rank netId: " + netId);
+                        freefunPlayerExperience.Add(intNetId, new FreefunPlayerExperience
+                        {
+                            netId = intNetId,
+                            xp = xp,
+                            rank = rank
+                        });
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.ToString());
+                }
+            }
+            Debug.WriteLine("Freefun Players experience count: " + freefunPlayers.Keys.Count());
         }
 
         /// <summary>
@@ -321,7 +361,7 @@ namespace FivemPlayerlist
             while (!IsPedheadshotReady(headshotHandle) || !IsPedheadshotValid(headshotHandle))
             {
                 // Debug.WriteLine($"{ped} {headshotHandle} {IsPedheadshotReady(headshotHandle)} {IsPedheadshotValid(headshotHandle)}");
-                await Delay(100);
+                await Delay(50);
             }
             // Debug.WriteLine($"done: {ped} {headshotHandle} {IsPedheadshotReady(headshotHandle)} {IsPedheadshotValid(headshotHandle)}");
             var txd = GetPedheadshotTxdString(headshotHandle) ?? "";
@@ -337,19 +377,19 @@ namespace FivemPlayerlist
         {
             List<PlayerRow> rows = new List<PlayerRow>();
 
-            for (var x = 0; x < 150; x++) // cleaning up in case of a reload, this frees up all ped headshot handles :)
-            {
-                UnregisterPedheadshot(x);
-            }
+            // for (var x = 0; x < 150; x++) // cleaning up in case of a reload, this frees up all ped headshot handles :)
+            // {
+            //     UnregisterPedheadshot(x);
+            // }
 
             var amount = 0;
-            foreach (FreefunPlayer p in this.freefunPlayers)
+            foreach (FreefunPlayer p in this.freefunPlayers.Values)
             {
                 if (IsRowSupposedToShow(amount))
                 {
                     PlayerRow row = new PlayerRow(); // Set as a blank PlayerRow obj
                     string cleanName = p.userName.Replace("<", "").Replace(">", "").Replace("^", "").Replace("~", "").Trim();
-                    string rightText = "";
+                    string rightText = freefunPlayerExperience.ContainsKey(p.netId) ? freefunPlayerExperience[p.netId].rank.ToString() : "0";
                     string name = cleanName;
                     row = new PlayerRow()
                     {
