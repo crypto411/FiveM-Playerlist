@@ -320,10 +320,13 @@ namespace FivemPlayerlist
              */
             while (!IsPedheadshotReady(headshotHandle) || !IsPedheadshotValid(headshotHandle))
             {
-                headshotHandle = RegisterPedheadshot(ped);
-                await Delay(0);
+                // Debug.WriteLine($"{ped} {headshotHandle} {IsPedheadshotReady(headshotHandle)} {IsPedheadshotValid(headshotHandle)}");
+                await Delay(100);
             }
-            return GetPedheadshotTxdString(headshotHandle) ?? "";
+            // Debug.WriteLine($"done: {ped} {headshotHandle} {IsPedheadshotReady(headshotHandle)} {IsPedheadshotValid(headshotHandle)}");
+            var txd = GetPedheadshotTxdString(headshotHandle) ?? "";
+            UnregisterPedheadshot(headshotHandle);
+            return txd;
         }
 
         /// <summary>
@@ -473,7 +476,7 @@ namespace FivemPlayerlist
             }
 
             //Maybe make configurable?
-            await Delay(1000);
+            await Delay(3000);
         }
 
     }
