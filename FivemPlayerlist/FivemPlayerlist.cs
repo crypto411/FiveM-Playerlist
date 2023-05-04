@@ -135,7 +135,7 @@ namespace FivemPlayerlist
                     Debug.WriteLine(e.ToString());
                 }
             }
-            Debug.WriteLine("Freefun Players experience count: " + freefunPlayers.Keys.Count());
+            Debug.WriteLine("Freefun Players experience count: " + freefunPlayerExperience.Keys.Count());
         }
 
         /// <summary>
@@ -299,8 +299,8 @@ namespace FivemPlayerlist
             }
             scale = new Scaleform("MP_MM_CARD_FREEMODE");
             var titleIcon = "2";
-            var titleLeftText = "FiveM";
-            var titleRightText = $"Players {NetworkGetNumConnectedPlayers()}/{maxClients}";
+            var titleLeftText = "Freefun-FiveM Indonesia!";
+            var titleRightText = $"Players {freefunPlayers.Keys.Count()}/{maxClients}";
             scale.CallFunction("SET_TITLE", titleLeftText, titleRightText, titleIcon);
             await UpdateScale();
             scale.CallFunction("DISPLAY_VIEW");
