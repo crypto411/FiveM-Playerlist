@@ -24,6 +24,28 @@ namespace FivemPlayerlist
         }
         private Dictionary<int, PlayerRowConfig> playerConfigs = new Dictionary<int, PlayerRowConfig>();
 
+        public struct FreefunPlayer
+        {
+            /*
+             * contract --
+              netId: any;
+              identifiers: string[];
+              userId: string;
+              userName: string;
+              createdAt: number;
+              playingTime: number;
+              kills: number;
+              deaths: number;
+              killsOnPed: number;
+              inGameJoin: number;
+            */
+            public int netId;
+            public string[] identifiers;
+            public string userId;
+            public string userName;
+        }
+        private IList<FreefunPlayer> freefunPlayers = new List<FreefunPlayer>();
+
         private Dictionary<int, string> textureCache = new Dictionary<int, string>();
 
         /// <summary>
@@ -32,6 +54,7 @@ namespace FivemPlayerlist
         public FivemPlayerlist()
         {
             TriggerServerEvent("fs:getMaxPlayers");
+            TriggerServerEvent("freefundb:server:requestInfinityPlayer");
             Tick += ShowScoreboard;
             Tick += DisplayController;
             Tick += BackupTimer;
@@ -41,6 +64,38 @@ namespace FivemPlayerlist
 
             EventHandlers.Add("fs:setMaxPlayers", new Action<int>(SetMaxPlayers));
             EventHandlers.Add("fs:setPlayerConfig", new Action<int, string, int, bool>(SetPlayerConfig));
+            EventHandlers.Add("freefundb:client:onInfinityPlayerUpdate", new Action<List<object>>(onInfinityPlayerUpdate));
+            Debug.WriteLine("init?");
+        }
+
+        public void onInfinityPlayerUpdate(List<object> _players)
+        {
+            freefunPlayers.Clear();
+            foreach(var _player in _players) {
+                try
+                {
+                    if(_player is IDictionary<string, object> player)
+                    {
+                        string netId = player["netId"].ToString();
+                        Debug.WriteLine("netId: " + netId);
+                        var freefunPlayer = new FreefunPlayer()
+                        {
+                            netId = Int32.Parse(netId),
+                            identifiers = player["identifiers"] as string[],
+                            userId = player["userId"] as string,
+                            userName = player["userName"] as string,
+                        };
+                        freefunPlayers.Add(freefunPlayer);
+                        Debug.WriteLine("Freefun player" + freefunPlayer.userName);
+
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.ToString());
+                }
+            }
+            Debug.WriteLine("Freefun Players count: "+freefunPlayers.Count());
         }
 
         /// <summary>
@@ -285,27 +340,43 @@ namespace FivemPlayerlist
             }
 
             var amount = 0;
-            foreach (Player p in new PlayerList())
+            foreach (FreefunPlayer p in this.freefunPlayers)
             {
                 if (IsRowSupposedToShow(amount))
                 {
                     PlayerRow row = new PlayerRow(); // Set as a blank PlayerRow obj
-
-                    if (playerConfigs.ContainsKey(p.ServerId))
+                    string cleanName = p.userName.Replace("<", "").Replace(">", "").Replace("^", "").Replace("~", "").Trim();
+                    string rightText = "";
+                    string name = cleanName;
+                    row = new PlayerRow()
+                    {
+                        color = 111,
+                        crewLabelText = "",
+                        friendType = ' ',
+                        iconOverlayText = "",
+                        jobPointsDisplayType = PlayerRow.DisplayType.NUMBER_ONLY,
+                        jobPointsText = "ServerId: " + p.netId,
+                        name = name,
+                        rightIcon = (int)PlayerRow.RightIconType.RANK_FREEMODE,
+                        rightText = rightText,
+                        serverId = p.netId,
+                    };
+                    /*
+                    if (playerConfigs.ContainsKey(p.netId))
                     {
                         row = new PlayerRow()
                         {
                             color = 111,
-                            crewLabelText = playerConfigs[p.ServerId].crewName,
+                            crewLabelText = playerConfigs[p.netId].crewName,
                             friendType = ' ',
                             iconOverlayText = "",
-                            jobPointsDisplayType = playerConfigs[p.ServerId].showJobPointsIcon ? PlayerRow.DisplayType.ICON :
-                                (playerConfigs[p.ServerId].jobPoints >= 0 ? PlayerRow.DisplayType.NUMBER_ONLY : PlayerRow.DisplayType.NONE),
-                            jobPointsText = playerConfigs[p.ServerId].jobPoints >= 0 ? playerConfigs[p.ServerId].jobPoints.ToString() : "",
-                            name = p.Name.Replace("<", "").Replace(">", "").Replace("^", "").Replace("~", "").Trim(),
+                            jobPointsDisplayType = playerConfigs[p.netId].showJobPointsIcon ? PlayerRow.DisplayType.ICON :
+                                (playerConfigs[p.netId].jobPoints >= 0 ? PlayerRow.DisplayType.NUMBER_ONLY : PlayerRow.DisplayType.NONE),
+                            jobPointsText = playerConfigs[p.netId].jobPoints >= 0 ? playerConfigs[p.netId].jobPoints.ToString() : "",
+                            name = name,
                             rightIcon = (int)PlayerRow.RightIconType.RANK_FREEMODE,
-                            rightText = $"{p.ServerId}",
-                            serverId = p.ServerId,
+                            rightText = rank.ToString(),
+                            serverId = p.netId,
                         };
                     }
                     else
@@ -318,17 +389,18 @@ namespace FivemPlayerlist
                             iconOverlayText = "",
                             jobPointsDisplayType = PlayerRow.DisplayType.NUMBER_ONLY,
                             jobPointsText = "",
-                            name = p.Name.Replace("<", "").Replace(">", "").Replace("^", "").Replace("~", "").Trim(),
+                            name = name,
                             rightIcon = (int)PlayerRow.RightIconType.RANK_FREEMODE,
-                            rightText = $"{p.ServerId}",
-                            serverId = p.ServerId,
+                            rightText = rank.ToString(),
+                            serverId = p.netId,
                         };
                     }
+                    */
 
                     //Debug.WriteLine("Checking if {0} is in the Dic. Their SERVER ID {1}.", p.Name, p.ServerId);
-                    if (textureCache.ContainsKey(p.ServerId))
+                    if (textureCache.ContainsKey(p.netId))
                     {
-                        row.textureString = textureCache[p.ServerId];
+                        row.textureString = textureCache[p.netId];
                     }
                     else
                     {
@@ -397,6 +469,7 @@ namespace FivemPlayerlist
                 string headshot = await GetHeadshotImage(GetPlayerPed(p.Handle));
 
                 textureCache[p.ServerId] = headshot;
+                // Debug.WriteLine($"Headshot for {p.ServerId}: {headshot}");
             }
 
             //Maybe make configurable?
