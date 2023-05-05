@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using CitizenFX.Core;
 using static CitizenFX.Core.Native.API;
-using static CitizenFX.Core.UI.Screen;
 
 namespace FivemPlayerlist
 {
@@ -62,7 +61,7 @@ namespace FivemPlayerlist
         public FivemPlayerlist()
         {
             TriggerServerEvent("fs:getMaxPlayers");
-            // TriggerServerEvent("freefundb:server:requestInfinityPlayer");
+            TriggerServerEvent("freefundb:server:requestInfinityPlayer");
             Tick += ShowScoreboard;
             Tick += DisplayController;
             Tick += BackupTimer;
@@ -73,7 +72,7 @@ namespace FivemPlayerlist
             EventHandlers.Add("fs:setMaxPlayers", new Action<int>(SetMaxPlayers));
             EventHandlers.Add("fs:setPlayerConfig", new Action<int, string, int, bool>(SetPlayerConfig));
             EventHandlers.Add("freefundb:client:onInfinityPlayerUpdate", new Action<List<object>>(onInfinityPlayerUpdate));
-            EventHandlers.Add("xperience:client:onPlayerRankUpdate", new Action<List<object>>(onPlayerRankUpdate));
+            EventHandlers.Add("xperience:client:onPlayerRankUpdate", new Action<object>(onPlayerRankUpdate));
             Debug.WriteLine("init?");
         }
 
@@ -108,31 +107,35 @@ namespace FivemPlayerlist
             Debug.WriteLine("Freefun Players count: "+freefunPlayers.Keys.Count());
         }
 
-        private void onPlayerRankUpdate(List<object> obj)
+        private void onPlayerRankUpdate(object obj)
         {
             freefunPlayerExperience.Clear();
-            foreach (var _player in obj)
+            if(obj is ExpandoObject expandoObject)
             {
-                try
+                Debug.WriteLine("countttt" + expandoObject.Count());
+                foreach (var _player in expandoObject)
                 {
-                    if (_player is IDictionary<string, object> player)
+                    try
                     {
-                        string netId = player["netId"].ToString();
-                        int intNetId = Int32.Parse(netId);
-                        int rank = Int32.Parse(player["rank"].ToString());
-                        int xp = Int32.Parse(player["xp"].ToString());
-                        Debug.WriteLine("rank netId: " + netId);
-                        freefunPlayerExperience.Add(intNetId, new FreefunPlayerExperience
+                        if (_player.Value is IDictionary<string, object> player)
                         {
-                            netId = intNetId,
-                            xp = xp,
-                            rank = rank
-                        });
+                            string netId = player["netId"].ToString();
+                            int intNetId = Int32.Parse(netId);
+                            int rank = Int32.Parse(player["rank"].ToString());
+                            int xp = Int32.Parse(player["xp"].ToString());
+                            Debug.WriteLine("rank netId: " + netId);
+                            freefunPlayerExperience.Add(intNetId, new FreefunPlayerExperience
+                            {
+                                netId = intNetId,
+                                xp = xp,
+                                rank = rank
+                            });
+                        }
                     }
-                }
-                catch (Exception e)
-                {
-                    Debug.WriteLine(e.ToString());
+                    catch (Exception e)
+                    {
+                        Debug.WriteLine(e.ToString());
+                    }
                 }
             }
             Debug.WriteLine("Freefun Players experience count: " + freefunPlayerExperience.Keys.Count());
@@ -358,12 +361,21 @@ namespace FivemPlayerlist
             /*
              * For some reason, the below loop didn't work originally without the Valid check or the re-registering of the headshot
              */
+            var timer = GetGameTimer();
             while (!IsPedheadshotReady(headshotHandle) || !IsPedheadshotValid(headshotHandle))
             {
-                // Debug.WriteLine($"{ped} {headshotHandle} {IsPedheadshotReady(headshotHandle)} {IsPedheadshotValid(headshotHandle)}");
-                await Delay(50);
+                if((GetGameTimer() - timer) < 1000)
+                {
+                    //Debug.WriteLine($"{ped} {headshotHandle} {IsPedheadshotReady(headshotHandle)} {IsPedheadshotValid(headshotHandle)}");
+                    await Delay(0);
+
+                }
+                else
+                {
+                    break;
+                }
             }
-            // Debug.WriteLine($"done: {ped} {headshotHandle} {IsPedheadshotReady(headshotHandle)} {IsPedheadshotValid(headshotHandle)}");
+            //Debug.WriteLine($"done {ped} {headshotHandle} {IsPedheadshotReady(headshotHandle)} {IsPedheadshotValid(headshotHandle)}");
             var txd = GetPedheadshotTxdString(headshotHandle) ?? "";
             UnregisterPedheadshot(headshotHandle);
             return txd;
@@ -398,7 +410,7 @@ namespace FivemPlayerlist
                         friendType = ' ',
                         iconOverlayText = "",
                         jobPointsDisplayType = PlayerRow.DisplayType.NUMBER_ONLY,
-                        jobPointsText = "ServerId: " + p.netId,
+                        jobPointsText = "ID: " + p.netId,
                         name = name,
                         rightIcon = (int)PlayerRow.RightIconType.RANK_FREEMODE,
                         rightText = rightText,
@@ -509,14 +521,19 @@ namespace FivemPlayerlist
 
             foreach (Player p in playersToCheck)
             {
-                string headshot = await GetHeadshotImage(GetPlayerPed(p.Handle));
+                var ped = GetPlayerPed(p.Handle);
+                if(!IsEntityDead(ped) || !IsPedFatallyInjured(ped))
+                {
+                    //Debug.WriteLine($"begin get headshot {Game.Player.Handle} -> {p.Handle}");
+                    string headshot = await GetHeadshotImage(ped);
 
-                textureCache[p.ServerId] = headshot;
-                // Debug.WriteLine($"Headshot for {p.ServerId}: {headshot}");
+                    textureCache[p.ServerId] = headshot;
+                    //Debug.WriteLine($"Headshot for {p.ServerId}: {headshot}");
+                }
             }
 
             //Maybe make configurable?
-            await Delay(3000);
+            await Delay(10000);
         }
 
     }
