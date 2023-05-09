@@ -20,7 +20,8 @@ namespace FivemPlayerlistServer
 
         private void ReturnMaxPlayers([FromSource] Player source)
         {
-            source.TriggerEvent("fs:setMaxPlayers", int.Parse(GetConvar("sv_maxClients", "30").ToString()));
+            source.TriggerEvent("fs:setMaxPlayers", int.Parse(GetConvar("sv_maxclients", "30").ToString()));
+            Debug.WriteLine($"max players requested? {source.Name}");
             //var pl = new PlayerList();
             //foreach (Player p in pl)
             //{

@@ -13,6 +13,7 @@ namespace FivemPlayerlist
         private int maxClients = -1;
         private bool ScaleSetup = false;
         private int currentPage = 0;
+        private bool debugMode = false;
         Scaleform scale;
         private int maxPages = (int)Math.Ceiling((double)new PlayerList().Count() / 16.0);
         public struct PlayerRowConfig
@@ -185,7 +186,7 @@ namespace FivemPlayerlist
         /// </summary>
         private void UpdateMaxPages()
         {
-            maxPages = (int)Math.Ceiling((double)new PlayerList().Count() / 16.0);
+            maxPages = (int)Math.Ceiling((double)freefunPlayers.Keys.Count() / 16.0);
         }
 
         /// <summary>
@@ -197,14 +198,27 @@ namespace FivemPlayerlist
             if (Game.IsControlJustPressed(0, Control.MultiplayerInfo))
             {
                 UpdateMaxPages();
+                if(debugMode)
+                {
+                    Debug.WriteLine($"Max pages? {maxPages}");
+                }
                 if (ScaleSetup)
                 {
+                    if (debugMode)
+                    {
+                        Debug.WriteLine($"scale setup? {ScaleSetup}");
+                    }
                     currentPage++;
                     if (currentPage > maxPages)
                     {
                         currentPage = 0;
                     }
                     await LoadScale();
+
+                    if (debugMode)
+                    {
+                        Debug.WriteLine($"scale loaded??");
+                    }
                     var timer = GetGameTimer();
                     bool nextPage = false;
                     while (GetGameTimer() - timer < 8000)
@@ -252,6 +266,10 @@ namespace FivemPlayerlist
         /// <returns></returns>
         private async Task ShowScoreboard()
         {
+            if(debugMode)
+            {
+                //Debug.WriteLine($"maxClients? {maxClients}");
+            }
             if (maxClients != -1)
             {
                 if (!ScaleSetup)
@@ -307,6 +325,11 @@ namespace FivemPlayerlist
             scale.CallFunction("SET_TITLE", titleLeftText, titleRightText, titleIcon);
             await UpdateScale();
             scale.CallFunction("DISPLAY_VIEW");
+
+            if (debugMode)
+            {
+                Debug.WriteLine($"display view? {maxPages}");
+            }
         }
 
         /// <summary>
@@ -466,6 +489,10 @@ namespace FivemPlayerlist
                     rows.Add(row);
                 }
                 amount++;
+                if (debugMode)
+                {
+                    Debug.WriteLine($"amount increased? {amount}");
+                }
             }
             rows.Sort((row1, row2) => row1.serverId.CompareTo(row2.serverId));
             for (var i = 0; i < maxClients * 2; i++)
@@ -486,6 +513,11 @@ namespace FivemPlayerlist
                         "", (int)row.jobPointsDisplayType, row.textureString, row.textureString, row.friendType);
                 }
                 index++;
+            }
+
+            if (debugMode)
+            {
+                Debug.WriteLine($"row total? {index}");
             }
 
             await Delay(0);
@@ -522,18 +554,17 @@ namespace FivemPlayerlist
             foreach (Player p in playersToCheck)
             {
                 var ped = GetPlayerPed(p.Handle);
-                if(!IsEntityDead(ped) || !IsPedFatallyInjured(ped))
-                {
                     //Debug.WriteLine($"begin get headshot {Game.Player.Handle} -> {p.Handle}");
-                    string headshot = await GetHeadshotImage(ped);
-
+                string headshot = await GetHeadshotImage(ped);
+                if (!IsPedFatallyInjured(ped) && NetworkIsPlayerActive(p.Handle))
+                {
                     textureCache[p.ServerId] = headshot;
                     //Debug.WriteLine($"Headshot for {p.ServerId}: {headshot}");
                 }
             }
 
             //Maybe make configurable?
-            await Delay(10000);
+            await Delay(3000);
         }
 
     }
