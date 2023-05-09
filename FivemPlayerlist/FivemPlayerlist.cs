@@ -476,9 +476,10 @@ namespace FivemPlayerlist
                     */
 
                     //Debug.WriteLine("Checking if {0} is in the Dic. Their SERVER ID {1}.", p.Name, p.ServerId);
-                    if (textureCache.ContainsKey(p.netId))
+                    if (textureCache.ContainsKey(p.netId) && GetPlayerFromServerId(p.netId) != -1)
                     {
                         row.textureString = textureCache[p.netId];
+                        //Debug.WriteLine($"contains key {p.userName}[{p.netId}]: {row.textureString}");
                     }
                     else
                     {
@@ -553,18 +554,17 @@ namespace FivemPlayerlist
 
             foreach (Player p in playersToCheck)
             {
-                var ped = GetPlayerPed(p.Handle);
-                    //Debug.WriteLine($"begin get headshot {Game.Player.Handle} -> {p.Handle}");
-                string headshot = await GetHeadshotImage(ped);
-                if (!IsPedFatallyInjured(ped) && NetworkIsPlayerActive(p.Handle))
+                if (p != null && NetworkIsPlayerActive(p.Handle) && p.Character.Exists())
                 {
+                    //Debug.WriteLine($"begin get headshot {p.Name} -> {p.Character.Handle}");
+                    string headshot = await GetHeadshotImage(p.Character.Handle);
                     textureCache[p.ServerId] = headshot;
-                    //Debug.WriteLine($"Headshot for {p.ServerId}: {headshot}");
+                    //Debug.WriteLine($"Headshot for {p.Name}[{p.ServerId}]: {headshot} - Ped exist? {p.Character.Exists()} ped injured {IsPedFatallyInjured(p.Character.Handle)}");
                 }
             }
 
             //Maybe make configurable?
-            await Delay(3000);
+            await Delay(1000);
         }
 
     }
