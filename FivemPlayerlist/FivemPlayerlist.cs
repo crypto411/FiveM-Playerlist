@@ -14,6 +14,8 @@ namespace FivemPlayerlist
         private bool ScaleSetup = false;
         private int currentPage = 0;
         private bool debugMode = false;
+        private bool showPlayerlist = false;
+        private bool playerlistShown = false;
         Scaleform scale;
         private int maxPages = (int)Math.Ceiling((double)new PlayerList().Count() / 16.0);
         public struct PlayerRowConfig
@@ -140,6 +142,11 @@ namespace FivemPlayerlist
                 }
             }
             Debug.WriteLine("Freefun Players experience count: " + freefunPlayerExperience.Keys.Count());
+
+            if(!playerlistShown)
+            {
+                showPlayerlist = true;
+            }
         }
 
         /// <summary>
@@ -195,8 +202,13 @@ namespace FivemPlayerlist
         /// <returns></returns>
         private async Task DisplayController()
         {
-            if (Game.IsControlJustPressed(0, Control.MultiplayerInfo))
+            if (Game.IsControlJustPressed(0, Control.MultiplayerInfo) || showPlayerlist)
             {
+                showPlayerlist = false;
+                if(!playerlistShown)
+                {
+                    playerlistShown = true;
+                }
                 UpdateMaxPages();
                 if(debugMode)
                 {
@@ -387,7 +399,7 @@ namespace FivemPlayerlist
             var timer = GetGameTimer();
             while (!IsPedheadshotReady(headshotHandle) || !IsPedheadshotValid(headshotHandle))
             {
-                if((GetGameTimer() - timer) < 1000)
+                if((GetGameTimer() - timer) < 2000)
                 {
                     //Debug.WriteLine($"{ped} {headshotHandle} {IsPedheadshotReady(headshotHandle)} {IsPedheadshotValid(headshotHandle)}");
                     await Delay(0);
