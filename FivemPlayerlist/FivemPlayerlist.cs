@@ -64,7 +64,7 @@ namespace FivemPlayerlist
         public FivemPlayerlist()
         {
             TriggerServerEvent("fs:getMaxPlayers");
-            TriggerServerEvent("freefundb:server:requestInfinityPlayer");
+            TriggerServerEvent("requestInfinityPlayer");
             Tick += ShowScoreboard;
             Tick += DisplayController;
             Tick += BackupTimer;
@@ -74,7 +74,7 @@ namespace FivemPlayerlist
 
             EventHandlers.Add("fs:setMaxPlayers", new Action<int>(SetMaxPlayers));
             EventHandlers.Add("fs:setPlayerConfig", new Action<int, string, int, bool>(SetPlayerConfig));
-            EventHandlers.Add("freefundb:client:onInfinityPlayerUpdate", new Action<List<object>>(onInfinityPlayerUpdate));
+            EventHandlers.Add("onInfinityPlayerUpdate", new Action<List<object>>(onInfinityPlayerUpdate));
             EventHandlers.Add("xperience:client:onPlayerRankUpdate", new Action<object>(onPlayerRankUpdate));
             Debug.WriteLine("init?");
         }
